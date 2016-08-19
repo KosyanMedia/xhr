@@ -11,7 +11,8 @@ module.exports = createXHR
 
 function createXHR(options, callback) {
     function readystatechange() {
-        if (xhr.readyState === 4) {
+        var isOnloadWillFire = 'onload' in new XMLHttpRequest
+        if (xhr.readyState === 4 && !isOnloadWillFire) {
             loadFunc()
         }
     }
@@ -34,16 +35,7 @@ function createXHR(options, callback) {
 
         return body
     }
-    
-    var failureResponse = {
-                body: undefined,
-                headers: {},
-                statusCode: 0,
-                method: method,
-                url: uri,
-                rawRequest: xhr
-            }
-    
+
     function errorFunc(evt) {
         clearTimeout(timeoutTimer)
         if(!(evt instanceof Error)){
@@ -53,21 +45,19 @@ function createXHR(options, callback) {
         callback(evt, failureResponse)
     }
 
+    function abortFunc(evt) {
+      failureResponse.aborted = true
+      errorFunc(evt)
+    }
+
     // will load the data & process the response in a special response object
     function loadFunc() {
         clearTimeout(timeoutTimer)
-        
+
         var status = (xhr.status === 1223 ? 204 : xhr.status)
-        var response = {
-                body: undefined,
-                headers: {},
-                statusCode: status,
-                method: method,
-                url: uri,
-                rawRequest: xhr
-            }
+        var response = failureResponse
         var err = null
-        
+
         if (status !== 0){
             response = {
                 body: getBody(),
@@ -84,9 +74,9 @@ function createXHR(options, callback) {
             err = new Error("Internal XMLHttpRequest Error")
         }
         callback(err, response, response.body)
-        
+
     }
-    
+
     if (typeof options === "string") {
         options = { uri: options }
     }
@@ -115,6 +105,14 @@ function createXHR(options, callback) {
     var sync = !!options.sync
     var isJson = false
     var timeoutTimer
+    var failureResponse = {
+        body: undefined,
+        headers: {},
+        statusCode: 0,
+        method: method,
+        url: uri,
+        rawRequest: xhr
+    }
 
     if ("json" in options) {
         isJson = true
@@ -128,6 +126,7 @@ function createXHR(options, callback) {
     xhr.onreadystatechange = readystatechange
     xhr.onload = loadFunc
     xhr.onerror = errorFunc
+    xhr.onabort = abortFunc
     // IE9 must have onprogress be set to a unique function.
     xhr.onprogress = function () {
         // IE must die
@@ -160,8 +159,8 @@ function createXHR(options, callback) {
     if ("responseType" in options) {
         xhr.responseType = options.responseType
     }
-    
-    if ("beforeSend" in options && 
+
+    if ("beforeSend" in options &&
         typeof options.beforeSend === "function"
     ) {
         options.beforeSend(xhr)
