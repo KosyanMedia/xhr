@@ -58,7 +58,14 @@ function createXHR(options, callback) {
         clearTimeout(timeoutTimer)
         
         var status = (xhr.status === 1223 ? 204 : xhr.status)
-        var response = failureResponse
+        var response = {
+                body: undefined,
+                headers: {},
+                statusCode: status,
+                method: method,
+                url: uri,
+                rawRequest: xhr
+            }
         var err = null
         
         if (status !== 0){
