@@ -1,8 +1,6 @@
 "use strict";
-var window = require("global/window")
 var once = require("once")
 var parseHeaders = require("parse-headers")
-
 
 var XHR = window.XMLHttpRequest || noop
 var XDR = "withCredentials" in (new XHR()) ? XHR : window.XDomainRequest
